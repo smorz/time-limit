@@ -39,8 +39,6 @@ func main() {
 		Shutdown()
 	}()
 
-	check := time.NewTimer(check_interval)
-
 	for {
 		log.Println(time.Since(baseTime)) //--
 		if time.Since(baseTime) >= time.Hour*24 {
@@ -56,7 +54,7 @@ func main() {
 		if td >= total_limit {
 			total <- struct{}{}
 		}
-		<-check.C
+		time.Sleep(check_interval)
 		db.IncTotalDuration(check_interval)
 	}
 }
