@@ -1,4 +1,5 @@
-package timelimit
+//A simple wrapper for the badger
+package database
 
 import (
 	"log"
@@ -16,6 +17,7 @@ type DB struct {
 	b *badger.DB
 }
 
+// NewDB Create a new badger Database Object
 func NewDB(dir string) (*DB, error) {
 	var db DB
 	option := badger.DefaultOptions(dir)
@@ -29,27 +31,28 @@ func NewDB(dir string) (*DB, error) {
 	return &db, nil
 }
 
-func (db *DB) SetBaseTime(t time.Time) error {
+// SetTime Sets a key/value pair that the value type is Time.
+func (db *DB) SetTime(key string, t time.Time) error {
 	return db.b.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte("base_time"), []byte(t.Format(layout)))
+		err := txn.Set([]byte(key), []byte(t.Format(layout)))
 		return err
 	})
 }
 
-func (db *DB) GetBaseTime() (t time.Time, err error) {
+// GetTime Retrieves the value of a key and tries to convert it to Time.
+func (db *DB) GetTime(key string) (t time.Time, err error) {
 	err = db.b.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte("base_time"))
+		item, err := txn.Get([]byte(key))
 		if err != nil {
 			if strings.Contains(err.Error(), "Key not found") {
 				t = time.Now()
-				db.SetBaseTime(t)
+				db.SetTime(key, t)
 				return nil
 			} else {
 				return err
 			}
 		}
 		err = item.Value(func(val []byte) error {
-			// This func with val would only be called if item.Value encounters no error.
 			t, err = time.Parse(layout, string(val))
 			if err != nil {
 				return err
@@ -61,27 +64,28 @@ func (db *DB) GetBaseTime() (t time.Time, err error) {
 	return
 }
 
-func (db *DB) SetTotalDuration(d time.Duration) error {
+// SetTime Sets a key/value pair that the value type is Duration.
+func (db *DB) SetDuration(key string, d time.Duration) error {
 	return db.b.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte("total_duration"), []byte(d.String()))
+		err := txn.Set([]byte(key), []byte(d.String()))
 		return err
 	})
 }
 
-func (db *DB) GetTotalDuration() (d time.Duration, err error) {
+// GetDuration Retrieves the value of a key and tries to convert it to Duration.
+func (db *DB) GetDuration(key string) (d time.Duration, err error) {
 	err = db.b.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte("total_duration"))
+		item, err := txn.Get([]byte(key))
 		if err != nil {
 			if strings.Contains(err.Error(), "Key not found") {
 				d = 0
-				db.SetTotalDuration(d)
+				db.SetDuration(key, d)
 				return nil
 			} else {
 				return err
 			}
 		}
 		err = item.Value(func(val []byte) error {
-			// This func with val would only be called if item.Value encounters no error.
 			d, err = time.ParseDuration(string(val))
 			if err != nil {
 				return err
@@ -93,13 +97,14 @@ func (db *DB) GetTotalDuration() (d time.Duration, err error) {
 	return
 }
 
-func (db *DB) IncTotalDuration(d time.Duration) error {
-	d0, err := db.GetTotalDuration()
+// IncDuration Takes the value of a key, assuming it is of type Duration, and increase it
+func (db *DB) IncDuration(key string, d time.Duration) error {
+	d0, err := db.GetDuration(key)
 	if err != nil {
 		return err
 	}
 	d0 += d
-	return db.SetTotalDuration(d0)
+	return db.SetDuration(key, d0)
 }
 func (db *DB) Close() error {
 	return db.b.Close()

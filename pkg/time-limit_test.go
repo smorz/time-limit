@@ -1,4 +1,4 @@
-package timelimit
+package database
 
 import (
 	"fmt"
@@ -6,11 +6,11 @@ import (
 	"time"
 )
 
-func TestGetBaseTime(t *testing.T) {
+func TestGetTime(t *testing.T) {
 	db, _ := NewDB("test")
 	now := time.Now()
-	db.SetBaseTime(now)
-	ti, err := db.GetBaseTime()
+	db.SetTime("base_time", now)
+	ti, err := db.GetTime("base_time")
 	if err != nil {
 		t.Error(err)
 	}
@@ -23,8 +23,8 @@ func TestGetBaseTime(t *testing.T) {
 
 func TestGetTotalDuration(t *testing.T) {
 	db, _ := NewDB("test")
-	db.SetTotalDuration(time.Minute*15 + time.Second*2)
-	d, err := db.GetTotalDuration()
+	db.SetDuration("total_duration", time.Minute*15+time.Second*2)
+	d, err := db.GetDuration("total_duration")
 	if err != nil {
 		t.Error(err)
 	}
