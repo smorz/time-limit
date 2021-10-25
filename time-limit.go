@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"time"
 
-	database "github.com/smorz/time-limit/pkg"
+	"github.com/smorz/time-limit/database"
 )
 
 const (
@@ -72,7 +72,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("std", sinceTheStartOfTheSession) //--
 		if sinceTheStartOfTheSession >= allowedTimeForOneSession {
 			shutdownChannel <- struct{}{}
 		}
@@ -82,7 +81,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("td", sinceTheBeginningOfTheCycle) //--
 		if sinceTheBeginningOfTheCycle >= allowedTimeInOneCycle {
 			shutdownChannel <- struct{}{}
 		}
@@ -99,7 +97,6 @@ func main() {
 }
 
 func Shutdown() {
-	log.Println("خاموش شد")
 	if err := exec.Command("cmd", "/C", "shutdown", "/s").Run(); err != nil {
 		log.Println("Failed to initiate shutdown:", err)
 	}
