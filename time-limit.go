@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"os/exec"
 	"time"
 
@@ -24,6 +25,12 @@ const (
 func main() {
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	logFile, err := os.OpenFile("time-limit.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.SetOutput(logFile)
+	log.Println("Start")
 	db, err := database.NewDB("data")
 	if err != nil {
 		log.Fatal(err)
@@ -58,7 +65,6 @@ func main() {
 	}()
 
 	for {
-		log.Println(time.Since(cycleStart)) //--
 		// Is a cycle over?
 		if time.Since(cycleStart) >= oneCycle {
 			cycleStart = time.Now()
@@ -73,6 +79,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if sinceTheStartOfTheSession >= allowedTimeForOneSession {
+			log.Println("Reached the maximum time allowed for one session.")
 			shutdownChannel <- struct{}{}
 		}
 
@@ -82,6 +89,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if sinceTheBeginningOfTheCycle >= allowedTimeInOneCycle {
+			log.Println("Reached the maximum time allowed for one cycle.")
 			shutdownChannel <- struct{}{}
 		}
 
@@ -97,6 +105,7 @@ func main() {
 }
 
 func Shutdown() {
+	log.Println("Shutdown")
 	if err := exec.Command("cmd", "/C", "shutdown", "/s").Run(); err != nil {
 		log.Println("Failed to initiate shutdown:", err)
 	}
