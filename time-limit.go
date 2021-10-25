@@ -49,11 +49,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// It is a good idea to reduce the off time from the session time.
+	// Reset the usage rate since the start of a session.
 	sinceTheLastTimeOn := time.Since(lastTimeOn)
 	if sinceTheLastTimeOn > necessaryRestUntilTheNextSession || sinceTheLastTimeOn > sinceTheStartOfTheSession {
 		sinceTheStartOfTheSession = 0
 	} else {
+		// It is a good idea to reduce the off time from the session time.
 		sinceTheStartOfTheSession -= sinceTheLastTimeOn
 	}
 	db.SetDuration(sinceTheStartOfTheSessionKey, sinceTheStartOfTheSession)
