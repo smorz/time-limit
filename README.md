@@ -1,3 +1,4 @@
 # time-limit
 With the help of this tool, we can restrict children from using their personal computer too much.
-Must be run as a service using nssm.
+
+Its shortcut should be in the Startup folder or run as a service using [nssm](https://nssm.cc/). In the first case, it is better to build with the flag ```bash -ldflags -H=windowsgui```.
