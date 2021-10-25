@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os/exec"
 	"time"
 
 	database "github.com/smorz/time-limit/pkg"
@@ -99,7 +100,7 @@ func main() {
 
 func Shutdown() {
 	log.Println("خاموش شد")
-	// if err := exec.Command("cmd", "/C", "shutdown", "/s").Run(); err != nil {
-	// 	log.Println("Failed to initiate shutdown:", err)
-	// }
+	if err := exec.Command("cmd", "/C", "shutdown", "/s").Run(); err != nil {
+		log.Println("Failed to initiate shutdown:", err)
+	}
 }
