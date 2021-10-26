@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/nathan-osman/go-sunrise"
 	"github.com/smorz/time-limit/database"
 )
 
@@ -15,6 +16,8 @@ const (
 	oneCycle                         = time.Hour * 24
 	allowedTimeForOneSession         = time.Minute * 50
 	necessaryRestUntilTheNextSession = time.Minute * 30
+	Latitude                         = 35.6892
+	Longitude                        = 51.3890
 
 	cycleStartKey                  = "cycle_start"
 	sinceTheBeginningOfTheCycleKey = "since_the_beginning_of_the_cycle"
@@ -44,6 +47,11 @@ func main() {
 	check := time.NewTicker(checkInterval)
 
 	for {
+		if IsNight() {
+			log.Println("ّIt is night!")
+			Shutdown()
+		}
+
 		sinceTheStartOfTheSession, err := db.GetDuration(sinceTheStartOfTheSessionKey)
 		if err != nil {
 			log.Fatal(err)
@@ -111,4 +119,10 @@ func Shutdown() {
 	if err := exec.Command("cmd", "/C", "shutdown", "/s").Run(); err != nil {
 		log.Println("Failed to initiate shutdown:", err)
 	}
+}
+
+func IsNight() bool {
+	now := time.Now()
+	r, s := sunrise.SunriseSunset(Latitude, Longitude, now.Year(), now.Month(), now.Day())
+	return !(now.After(r.Local()) && now.Before(s.Local()))
 }
