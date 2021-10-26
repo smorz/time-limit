@@ -49,23 +49,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Reset the usage rate since the start of a session.
-	sinceTheLastTimeOn := time.Since(lastTimeOn)
-	if sinceTheLastTimeOn > necessaryRestUntilTheNextSession || sinceTheLastTimeOn > sinceTheStartOfTheSession {
-		sinceTheStartOfTheSession = 0
-	} else {
-		// It is a good idea to reduce the off time from the session time.
-		sinceTheStartOfTheSession -= sinceTheLastTimeOn
-	}
-	db.SetDuration(sinceTheStartOfTheSessionKey, sinceTheStartOfTheSession)
-
-	shutdownChannel := make(chan struct{})
-	go func() {
-		<-shutdownChannel
-		Shutdown()
-	}()
-
 	for {
+		// Has a new session started?
+		if sinceTheLastTimeOn := time.Since(lastTimeOn); sinceTheLastTimeOn > checkInterval*2 {
+			if sinceTheLastTimeOn > necessaryRestUntilTheNextSession {
+				// Reset the usage rate since the start of a session.
+				sinceTheStartOfTheSession = 0
+			} else {
+				if sinceTheLastTimeOn > necessaryRestUntilTheNextSession/2 {
+					// It is a good idea to reduce the off time from the session time.
+					sinceTheStartOfTheSession -= sinceTheLastTimeOn * allowedTimeForOneSession / necessaryRestUntilTheNextSession
+					if sinceTheStartOfTheSession < 0 {
+						sinceTheStartOfTheSession = 0
+					}
+				}
+			}
+			db.SetDuration(sinceTheStartOfTheSessionKey, sinceTheStartOfTheSession)
+		}
+
 		// Is a cycle over?
 		if time.Since(cycleStart) >= oneCycle {
 			cycleStart = time.Now()
@@ -81,7 +82,7 @@ func main() {
 		}
 		if sinceTheStartOfTheSession >= allowedTimeForOneSession {
 			log.Println("Reached the maximum time allowed for one session.")
-			shutdownChannel <- struct{}{}
+			Shutdown()
 		}
 
 		//Has the usage rate reached the maximum allowed since the beginning of the cycle?
@@ -91,7 +92,7 @@ func main() {
 		}
 		if sinceTheBeginningOfTheCycle >= allowedTimeInOneCycle {
 			log.Println("Reached the maximum time allowed for one cycle.")
-			shutdownChannel <- struct{}{}
+			Shutdown()
 		}
 
 		time.Sleep(checkInterval)
