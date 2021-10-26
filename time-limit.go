@@ -40,17 +40,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	sinceTheStartOfTheSession, err := db.GetDuration(sinceTheStartOfTheSessionKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-	lastTimeOn, err := db.GetTime(lastTimeOnKey)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	for {
+		sinceTheStartOfTheSession, err := db.GetDuration(sinceTheStartOfTheSessionKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		// Has a new session started?
+		lastTimeOn, err := db.GetTime(lastTimeOnKey)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if sinceTheLastTimeOn := time.Since(lastTimeOn); sinceTheLastTimeOn > checkInterval*2 {
 			log.Printf("Was stopped at %v.\n", lastTimeOn)
 			log.Println("Restart")
@@ -78,10 +79,6 @@ func main() {
 		}
 
 		// Has the usage rate reached the maximum allowed since the beginning of the session?
-		sinceTheStartOfTheSession, err := db.GetDuration(sinceTheStartOfTheSessionKey)
-		if err != nil {
-			log.Fatal(err)
-		}
 		if sinceTheStartOfTheSession >= allowedTimeForOneSession {
 			log.Println("Reached the maximum time allowed for one session.")
 			Shutdown()
