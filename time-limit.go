@@ -52,6 +52,8 @@ func main() {
 	for {
 		// Has a new session started?
 		if sinceTheLastTimeOn := time.Since(lastTimeOn); sinceTheLastTimeOn > checkInterval*2 {
+			log.Printf("Was stopped at %v.\n", lastTimeOn)
+			log.Println("Restart")
 			if sinceTheLastTimeOn > necessaryRestUntilTheNextSession {
 				// Reset the usage rate since the start of a session.
 				sinceTheStartOfTheSession = 0
