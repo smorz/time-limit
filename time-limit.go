@@ -41,6 +41,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	check := time.NewTicker(checkInterval)
+
 	for {
 		sinceTheStartOfTheSession, err := db.GetDuration(sinceTheStartOfTheSessionKey)
 		if err != nil {
@@ -94,8 +96,7 @@ func main() {
 			Shutdown()
 		}
 
-		time.Sleep(checkInterval)
-
+		<-check.C
 		// Increase durations
 		db.IncDuration(sinceTheBeginningOfTheCycleKey, checkInterval)
 		db.IncDuration(sinceTheStartOfTheSessionKey, checkInterval)
