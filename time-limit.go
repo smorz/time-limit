@@ -45,6 +45,7 @@ func main() {
 	}
 
 	check := time.NewTicker(checkInterval)
+	var restarted bool
 
 	for {
 		if IsNight() {
@@ -63,6 +64,7 @@ func main() {
 			log.Fatal(err)
 		}
 		if sinceTheLastTimeOn := time.Since(lastTimeOn); sinceTheLastTimeOn > checkInterval*2 {
+			restarted = true
 			log.Printf("Was stopped at %v.\n", lastTimeOn)
 			log.Println("Restart")
 			if sinceTheLastTimeOn > necessaryRestUntilTheNextSession {
@@ -79,7 +81,6 @@ func main() {
 			}
 			db.SetDuration(sinceTheStartOfTheSessionKey, sinceTheStartOfTheSession)
 		}
-
 		// Is a cycle over?
 		if time.Since(cycleStart) >= oneCycle {
 			cycleStart = time.Now()
@@ -110,7 +111,11 @@ func main() {
 		db.IncDuration(sinceTheStartOfTheSessionKey, checkInterval)
 
 		// Update the last time it was on
-		db.SetTime(lastTimeOnKey, time.Now())
+		if restarted || time.Since(lastTimeOn) < checkInterval*2 {
+			db.SetTime(lastTimeOnKey, time.Now())
+			restarted = false
+		}
+
 	}
 }
 
