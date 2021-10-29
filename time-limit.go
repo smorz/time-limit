@@ -13,7 +13,7 @@ import (
 const (
 	checkInterval                    = time.Minute
 	allowedTimeInOneCycle            = time.Minute * 150
-	oneCycle                         = time.Hour * 24
+	oneCycle                         = 14*time.Hour + 35*time.Minute
 	allowedTimeForOneSession         = time.Minute * 50
 	necessaryRestUntilTheNextSession = time.Minute * 30
 	Latitude                         = 35.6892
