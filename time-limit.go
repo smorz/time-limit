@@ -38,7 +38,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer func(){
+		 db.Close()
+		 Shutdown()
+	}()
 	cycleStart, err := db.GetTime(cycleStartKey)
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +53,7 @@ func main() {
 	for {
 		if IsNight() {
 			log.Println("ّIt is night!")
-			Shutdown()
+			return
 		}
 
 		sinceTheStartOfTheSession, err := db.GetDuration(sinceTheStartOfTheSessionKey)
@@ -92,7 +95,7 @@ func main() {
 		// Has the usage rate reached the maximum allowed since the beginning of the session?
 		if sinceTheStartOfTheSession >= allowedTimeForOneSession {
 			log.Println("Reached the maximum time allowed for one session.")
-			Shutdown()
+			return
 		}
 
 		//Has the usage rate reached the maximum allowed since the beginning of the cycle?
@@ -102,7 +105,7 @@ func main() {
 		}
 		if sinceTheBeginningOfTheCycle >= allowedTimeInOneCycle {
 			log.Println("Reached the maximum time allowed for one cycle.")
-			Shutdown()
+			return
 		}
 
 		<-check.C
