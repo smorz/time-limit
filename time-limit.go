@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"time"
 
 	"github.com/nathan-osman/go-sunrise"
@@ -34,14 +36,23 @@ func main() {
 	}
 	log.SetOutput(logFile)
 	log.Println("Start")
-	db, err := database.NewDB("data")
+	db, err := database.OpenDB("data")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func(){
-		 db.Close()
-		 Shutdown()
+	defer func() {
+		db.Close()
+		Shutdown()
 	}()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	ctx, exit := context.WithCancel(context.Background())
+	go func() {
+		oscall := <-c
+		log.Printf("system call: %+v\n", oscall)
+		exit()
+	}()
+
 	cycleStart, err := db.GetTime(cycleStartKey)
 	if err != nil {
 		log.Fatal(err)
@@ -108,7 +119,12 @@ func main() {
 			return
 		}
 
-		<-check.C
+		select {
+		case <-ctx.Done():
+			return
+		case <-check.C:
+		}
+
 		// Increase durations
 		db.IncDuration(sinceTheBeginningOfTheCycleKey, checkInterval)
 		db.IncDuration(sinceTheStartOfTheSessionKey, checkInterval)

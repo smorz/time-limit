@@ -17,8 +17,8 @@ type DB struct {
 	b *badger.DB
 }
 
-// NewDB Create a new badger Database Object
-func NewDB(dir string) (*DB, error) {
+// OpenDB Create a new badger Database Object
+func OpenDB(dir string) (*DB, error) {
 	var db DB
 	option := badger.DefaultOptions(dir)
 	option.Logger = nil
