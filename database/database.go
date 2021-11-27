@@ -22,6 +22,7 @@ func NewDB(dir string) (*DB, error) {
 	var db DB
 	option := badger.DefaultOptions(dir)
 	option.Logger = nil
+	option.SyncWrites = true
 	bdb, err := badger.Open(option)
 	if err != nil {
 		log.Println(err)
