@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"time"
 
 	"github.com/nathan-osman/go-sunrise"
@@ -34,11 +36,23 @@ func main() {
 	}
 	log.SetOutput(logFile)
 	log.Println("Start")
-	db, err := database.NewDB("data")
+	db, err := database.OpenDB("data")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer func() {
+		db.Close()
+		Shutdown()
+	}()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	ctx, exit := context.WithCancel(context.Background())
+	go func() {
+		oscall := <-c
+		log.Printf("system call: %+v\n", oscall)
+		exit()
+	}()
+
 	cycleStart, err := db.GetTime(cycleStartKey)
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +64,7 @@ func main() {
 	for {
 		if IsNight() {
 			log.Println("ّIt is night!")
-			Shutdown()
+			return
 		}
 
 		sinceTheStartOfTheSession, err := db.GetDuration(sinceTheStartOfTheSessionKey)
@@ -92,7 +106,7 @@ func main() {
 		// Has the usage rate reached the maximum allowed since the beginning of the session?
 		if sinceTheStartOfTheSession >= allowedTimeForOneSession {
 			log.Println("Reached the maximum time allowed for one session.")
-			Shutdown()
+			return
 		}
 
 		//Has the usage rate reached the maximum allowed since the beginning of the cycle?
@@ -102,10 +116,15 @@ func main() {
 		}
 		if sinceTheBeginningOfTheCycle >= allowedTimeInOneCycle {
 			log.Println("Reached the maximum time allowed for one cycle.")
-			Shutdown()
+			return
 		}
 
-		<-check.C
+		select {
+		case <-ctx.Done():
+			return
+		case <-check.C:
+		}
+
 		// Increase durations
 		db.IncDuration(sinceTheBeginningOfTheCycleKey, checkInterval)
 		db.IncDuration(sinceTheStartOfTheSessionKey, checkInterval)
