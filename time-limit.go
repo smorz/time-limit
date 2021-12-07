@@ -32,13 +32,30 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	logFile, err := os.OpenFile("time-limit.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		err = os.Remove("time-limit.log")
+		if err != nil {
+			log.Fatal(err)
+		}
+		logFile, err = os.OpenFile("time-limit.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	log.SetOutput(logFile)
 	log.Println("Start")
+
 	db, err := database.OpenDB("data")
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		err = os.RemoveAll("data")
+		if err != nil {
+			log.Fatal(err)
+		}
+		db, err = database.OpenDB("data")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	defer func() {
 		db.Close()
