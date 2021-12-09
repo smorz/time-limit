@@ -9,7 +9,7 @@ import (
 func TestGetTime(t *testing.T) {
 	db, _ := OpenDB("test")
 	now := time.Now()
-	db.SetTime("base_time", now)
+	db.Set("base_time", now)
 	ti, err := db.GetTime("base_time")
 	if err != nil {
 		t.Error(err)
@@ -23,7 +23,7 @@ func TestGetTime(t *testing.T) {
 
 func TestGetTotalDuration(t *testing.T) {
 	db, _ := OpenDB("test")
-	db.SetDuration("total_duration", time.Minute*15+time.Second*2)
+	db.Set("total_duration", time.Minute*15+time.Second*2)
 	d, err := db.GetDuration("total_duration")
 	if err != nil {
 		t.Error(err)

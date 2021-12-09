@@ -2,11 +2,10 @@
 package database
 
 import (
-	"log"
-	"strings"
+	"encoding/json"
+	"io/ioutil"
+	"os"
 	"time"
-
-	"github.com/dgraph-io/badger/v3"
 )
 
 const (
@@ -14,87 +13,71 @@ const (
 )
 
 type DB struct {
-	b *badger.DB
+	f *os.File
+	m map[string]interface{}
 }
 
 // OpenDB Create a new badger Database Object
-func OpenDB(dir string) (*DB, error) {
+func OpenDB(file string) (*DB, error) {
 	var db DB
-	option := badger.DefaultOptions(dir)
-	option.Logger = nil
-	option.SyncWrites = true
-	bdb, err := badger.Open(option)
+	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
-	db.b = bdb
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) == 0 {
+		b = []byte("{}")
+	}
+	err = json.Unmarshal(b, &db.m)
+	if err != nil {
+		return nil, err
+	}
+	db.f = f
 	return &db, nil
 }
 
-// SetTime Sets a key/value pair that the value type is Time.
-func (db *DB) SetTime(key string, t time.Time) error {
-	return db.b.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte(key), []byte(t.Format(layout)))
+// Set Sets a key/value pair.
+func (db *DB) Set(key string, t interface{}) error {
+	db.m[key] = t
+	b, err := json.MarshalIndent(db.m, "", "	")
+	if err != nil {
 		return err
-	})
+	}
+	err = db.f.Truncate(0)
+	if err != nil {
+		return err
+	}
+	_, err = db.f.WriteAt(b, 0)
+	if err != nil {
+		return err
+	}
+	err = db.f.Sync()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetTime Retrieves the value of a key and tries to convert it to Time.
 func (db *DB) GetTime(key string) (t time.Time, err error) {
-	err = db.b.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(key))
-		if err != nil {
-			if strings.Contains(err.Error(), "Key not found") {
-				t = time.Now()
-				db.SetTime(key, t)
-				return nil
-			} else {
-				return err
-			}
-		}
-		err = item.Value(func(val []byte) error {
-			t, err = time.Parse(layout, string(val))
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		return nil
-	})
+	if t, ok := db.m[key].(time.Time); ok {
+		return t, nil
+	}
+	t = time.Now()
+	err = db.Set(key, t)
 	return
-}
-
-// SetTime Sets a key/value pair that the value type is Duration.
-func (db *DB) SetDuration(key string, d time.Duration) error {
-	return db.b.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte(key), []byte(d.String()))
-		return err
-	})
 }
 
 // GetDuration Retrieves the value of a key and tries to convert it to Duration.
 func (db *DB) GetDuration(key string) (d time.Duration, err error) {
-	err = db.b.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(key))
-		if err != nil {
-			if strings.Contains(err.Error(), "Key not found") {
-				d = 0
-				db.SetDuration(key, d)
-				return nil
-			} else {
-				return err
-			}
-		}
-		err = item.Value(func(val []byte) error {
-			d, err = time.ParseDuration(string(val))
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		return nil
-	})
+	if d, ok := db.m[key].(time.Duration); ok {
+		return d, nil
+	}
+	d = 0
+	err = db.Set(key, d)
 	return
 }
 
@@ -105,8 +88,14 @@ func (db *DB) IncDuration(key string, d time.Duration) error {
 		return err
 	}
 	d0 += d
-	return db.SetDuration(key, d0)
+	return db.Set(key, d0)
 }
+
+// Close Closes the file.
 func (db *DB) Close() error {
-	return db.b.Close()
+	err := db.f.Sync()
+	if err != nil {
+		return err
+	}
+	return db.f.Close()
 }

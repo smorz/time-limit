@@ -110,14 +110,14 @@ func main() {
 					}
 				}
 			}
-			db.SetDuration(sinceTheStartOfTheSessionKey, sinceTheStartOfTheSession)
+			db.Set(sinceTheStartOfTheSessionKey, sinceTheStartOfTheSession)
 		}
 		// Is a cycle over?
 		if time.Since(cycleStart) >= oneCycle {
 			cycleStart = time.Now()
-			db.SetTime(cycleStartKey, cycleStart)
+			db.Set(cycleStartKey, cycleStart)
 			// Reset the usage rate since the start of a cycle.
-			db.SetDuration(sinceTheBeginningOfTheCycleKey, 0)
+			db.Set(sinceTheBeginningOfTheCycleKey, 0)
 		}
 
 		// Has the usage rate reached the maximum allowed since the beginning of the session?
@@ -148,7 +148,7 @@ func main() {
 
 		// Update the last time it was on
 		if restarted || time.Since(lastTimeOn) < checkInterval*2 {
-			db.SetTime(lastTimeOnKey, time.Now())
+			db.Set(lastTimeOnKey, time.Now())
 			restarted = false
 		}
 
