@@ -8,10 +8,11 @@ import (
 	"time"
 )
 
+/*
 const (
 	layout = time.RFC3339
 )
-
+*/
 type DB struct {
 	f *os.File
 	m map[string]interface{}
@@ -63,8 +64,9 @@ func (db *DB) Set(key string, t interface{}) error {
 
 // GetTime Retrieves the value of a key and tries to convert it to Time.
 func (db *DB) GetTime(key string) (t time.Time, err error) {
-	if t, ok := db.m[key].(time.Time); ok {
-		return t, nil
+	if s, ok := db.m[key].(string); ok {
+		t, err = time.Parse(time.RFC3339Nano, s)
+		return
 	}
 	t = time.Now()
 	err = db.Set(key, t)
