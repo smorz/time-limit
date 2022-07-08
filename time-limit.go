@@ -2,24 +2,26 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"os/signal"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/nathan-osman/go-sunrise"
 	"github.com/smorz/time-limit/database"
 )
 
 const (
-	checkInterval                    = time.Minute
-	allowedTimeInOneCycle            = time.Minute * 150
-	oneCycle                         = 14*time.Hour + 35*time.Minute
-	allowedTimeForOneSession         = time.Minute * 50
-	necessaryRestUntilTheNextSession = time.Minute * 30
-	Latitude                         = 35.6892
-	Longitude                        = 51.3890
+	constCheckInterval                    = time.Minute
+	constAllowedTimeInOneCycle            = time.Minute * 150
+	contsOneCycle                         = 14*time.Hour + 35*time.Minute
+	constAllowedTimeForOneSession         = time.Minute * 50
+	constNecessaryRestUntilTheNextSession = time.Minute * 30
+	Latitude                              = 35.6892
+	Longitude                             = 51.3890
 
 	cycleStartKey                  = "cycle_start"
 	sinceTheBeginningOfTheCycleKey = "since_the_beginning_of_the_cycle"
@@ -27,14 +29,39 @@ const (
 	sinceTheStartOfTheSessionKey   = "since_the_start_of_the_session"
 )
 
-func main() {
+var (
+	checkInterval                    = constCheckInterval
+	allowedTimeInOneCycle            = constAllowedTimeInOneCycle
+	oneCycle                         = contsOneCycle
+	allowedTimeForOneSession         = constAllowedTimeForOneSession
+	necessaryRestUntilTheNextSession = constNecessaryRestUntilTheNextSession
+	debug                            = false
+)
 
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	logFile, err := os.OpenFile("time-limit.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+func init() {
+	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error loading .env file")
 	}
-	log.SetOutput(logFile)
+	if os.Getenv("debug") == "true" {
+		checkInterval /= 3000
+		allowedTimeInOneCycle /= 3000
+		oneCycle = time.Minute
+		allowedTimeForOneSession /= 3000
+		necessaryRestUntilTheNextSession = time.Second * 10
+		debug = true
+	}
+}
+
+func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	if !debug {
+		logFile, err := os.OpenFile("time-limit.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.SetOutput(logFile)
+	}
 	db, err := database.OpenDB("data")
 	if err != nil {
 		log.Fatal(err)
@@ -56,6 +83,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if debug {
+		fmt.Printf("Cycle Start: %v\n", cycleStart)
+	}
 
 	check := time.NewTicker(checkInterval)
 	var restarted bool
@@ -70,7 +100,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		// Has a new session started?
 		lastTimeOn, err := db.GetTime(lastTimeOnKey)
 		if err != nil {
@@ -79,7 +108,6 @@ func main() {
 		if sinceTheLastTimeOn := time.Since(lastTimeOn); sinceTheLastTimeOn > checkInterval*2 {
 			restarted = true
 			log.Printf("Was stopped at %v.\n", lastTimeOn)
-			log.Println("Restart")
 			if sinceTheLastTimeOn > necessaryRestUntilTheNextSession {
 				// Reset the usage rate since the start of a session.
 				sinceTheStartOfTheSession = 0
@@ -100,6 +128,9 @@ func main() {
 			db.Set(cycleStartKey, cycleStart)
 			// Reset the usage rate since the start of a cycle.
 			db.Set(sinceTheBeginningOfTheCycleKey, 0)
+			if debug {
+				fmt.Printf("Cycle start has been reset to: %v\n", cycleStart)
+			}
 		}
 
 		// Has the usage rate reached the maximum allowed since the beginning of the session?
@@ -116,6 +147,10 @@ func main() {
 		if sinceTheBeginningOfTheCycle >= allowedTimeInOneCycle {
 			log.Println("Reached the maximum time allowed for one cycle.")
 			return
+		}
+		if debug {
+			fmt.Printf("sbs: %v, sbc: %v, now: %v\n", sinceTheStartOfTheSession, sinceTheBeginningOfTheCycle, time.Now())
+
 		}
 
 		select {
@@ -137,15 +172,18 @@ func main() {
 	}
 }
 
-func Shutdown() {
-	log.Println("Shutdown")
-	if err := exec.Command("cmd", "/C", "shutdown", "/s").Run(); err != nil {
-		log.Println("Failed to initiate shutdown:", err)
-	}
-}
-
 func IsNight() bool {
 	now := time.Now()
 	r, s := sunrise.SunriseSunset(Latitude, Longitude, now.Year(), now.Month(), now.Day())
 	return !(now.After(r.Local()) && now.Before(s.Local()))
+}
+
+func Shutdown() {
+	log.Println("Shutdown")
+	if debug {
+		return
+	}
+	if err := exec.Command("cmd", "/C", "shutdown", "/s").Run(); err != nil {
+		log.Println("Failed to initiate shutdown:", err)
+	}
 }
