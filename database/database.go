@@ -3,8 +3,10 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"time"
 )
 
@@ -29,12 +31,13 @@ func OpenDB(file string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(b) == 0 {
-		b = []byte("{}")
-	}
 	err = json.Unmarshal(b, &db.m)
 	if err != nil {
-		return nil, err
+		b = []byte("{}")
+		err = json.Unmarshal(b, &db.m)
+		if err != nil {
+			return nil, err
+		}
 	}
 	db.f = f
 	return &db, nil
@@ -75,12 +78,17 @@ func (db *DB) GetTime(key string) (t time.Time, err error) {
 
 // GetDuration Retrieves the value of a key and tries to convert it to Duration.
 func (db *DB) GetDuration(key string) (d time.Duration, err error) {
-	if d, ok := db.m[key].(time.Duration); ok {
-		return d, nil
+	dur := db.m[key]
+	switch dur.(type) {
+	case time.Duration:
+		return dur.(time.Duration), nil
+	case float64:
+		return time.Duration(dur.(float64)), nil
+	case int:
+		return time.Duration(dur.(int)), nil
+	default:
+		return 0, fmt.Errorf("unknown type: %v", reflect.TypeOf(dur))
 	}
-	d = 0
-	err = db.Set(key, d)
-	return
 }
 
 // IncDuration Takes the value of a key, assuming it is of type Duration, and increase it
