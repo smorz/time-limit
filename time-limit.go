@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -16,7 +17,7 @@ import (
 
 const (
 	constCheckInterval                    = time.Minute
-	constAllowedTimeInOneCycle            = time.Minute * 150
+	constAllowedTimeForOneCycle           = time.Minute * 150
 	contsOneCycle                         = 14*time.Hour + 35*time.Minute
 	constAllowedTimeForOneSession         = time.Minute * 50
 	constNecessaryRestUntilTheNextSession = time.Minute * 30
@@ -31,7 +32,7 @@ const (
 
 var (
 	checkInterval                    = constCheckInterval
-	allowedTimeInOneCycle            = constAllowedTimeInOneCycle
+	allowedTimeForOneCycle           = constAllowedTimeForOneCycle
 	oneCycle                         = contsOneCycle
 	allowedTimeForOneSession         = constAllowedTimeForOneSession
 	necessaryRestUntilTheNextSession = constNecessaryRestUntilTheNextSession
@@ -43,9 +44,23 @@ func init() {
 	if err != nil {
 		log.Println("Error loading .env file")
 	}
+	if allowedCycleMin := os.Getenv("allowed_time_for_one_cycle_min"); allowedCycleMin != "" {
+		acm, err := strconv.ParseInt(allowedCycleMin, 10, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+		allowedTimeForOneCycle = time.Duration(acm) * time.Minute
+	}
+	if allowedSessionMin := os.Getenv("allowed_time_for_one_session_min"); allowedSessionMin != "" {
+		asm, err := strconv.ParseInt(allowedSessionMin, 10, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+		allowedTimeForOneSession = time.Duration(asm) * time.Minute
+	}
 	if os.Getenv("debug") == "true" {
 		checkInterval /= 3000
-		allowedTimeInOneCycle /= 3000
+		allowedTimeForOneCycle /= 3000
 		oneCycle = time.Minute
 		allowedTimeForOneSession /= 3000
 		necessaryRestUntilTheNextSession = time.Second * 10
@@ -144,7 +159,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if sinceTheBeginningOfTheCycle >= allowedTimeInOneCycle {
+		if sinceTheBeginningOfTheCycle >= allowedTimeForOneCycle {
 			log.Println("Reached the maximum time allowed for one cycle.")
 			return
 		}
