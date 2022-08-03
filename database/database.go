@@ -78,7 +78,10 @@ func (db *DB) GetTime(key string) (t time.Time, err error) {
 
 // GetDuration Retrieves the value of a key and tries to convert it to Duration.
 func (db *DB) GetDuration(key string) (d time.Duration, err error) {
-	dur := db.m[key]
+	dur, ok := db.m[key]
+	if !ok {
+		return 0, nil
+	}
 	switch dur.(type) {
 	case time.Duration:
 		return dur.(time.Duration), nil
